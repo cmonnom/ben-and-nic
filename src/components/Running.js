@@ -235,6 +235,9 @@ function Running(props) {
         <Button size="lg" variant="danger" onClick={handlePlus}>
           <span>CLICK ME! &#9825;</span>
         </Button>
+        <div>
+          <br />
+        </div>
         <label htmlFor="difficulty" className="padding-label">
           Difficulty:
         </label>
