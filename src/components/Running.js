@@ -4,8 +4,16 @@ import snowBen from "../assets/snow2.gif"
 import snowNic from "../assets/snow-reverse.gif"
 import { useState, useEffect, useRef } from "react"
 import Button from "react-bootstrap/Button"
+import ToggleButton from "react-bootstrap/ToggleButton"
+import ToggleButtonGroup from "react-bootstrap/ToggleButtonGroup"
 
 function Running(props) {
+  const radios = [
+    { delay: 1000, title: "Walk in the park" },
+    { delay: 100, title: "5K Run" },
+    { delay: 50, title: "26.2" },
+  ]
+
   const ratio = 0.5625
   const benDialogs = [
     "Nic!",
@@ -21,12 +29,14 @@ function Running(props) {
   ]
   const [step, setStep] = useState(window.outerWidth / 100)
   const [stepPushBack, setStepPushBack] = useState(step * 0.2)
-  const [benPush, setBenPush] = useState(50)
+  const [benPush, setBenPush] = useState(0)
   const [benTop, setBenTop] = useState(calcBenTop())
   const [nicTop, setNicTop] = useState(calcNicTop())
   const [benWidth, setBenWidth] = useState(calcBenWidth())
   const [nicWidth, setNicWidth] = useState(calcNicWidth())
   const [fadding, setFadding] = useState(false)
+  const [pushBackSpeedLatest, setPushBackSpeedLatest] = useState(100)
+  const [pushBackSpeed, setPushBackSpeed] = useState(100)
 
   const benPushRef = useRef(benPush)
   benPushRef.current = benPush
@@ -36,6 +46,10 @@ function Running(props) {
   stepRef.current = step
   const stepPushBackRef = useRef(stepPushBack)
   stepPushBackRef.current = stepPushBack
+  const pushBackSpeedRef = useRef(pushBackSpeed)
+  pushBackSpeedRef.current = pushBackSpeed
+  const pushBackSpeedLatestRef = useRef(pushBackSpeedLatest)
+  pushBackSpeedLatestRef.current = pushBackSpeedLatest
   useEffect(() => {
     function handleResize() {
       setBenPush(0)
@@ -45,21 +59,31 @@ function Running(props) {
       setNicWidth(calcNicWidth())
       setStep(window.outerWidth / 100)
       setStepPushBack(stepRef.current * 2)
+      setFadding(false)
     }
     window.addEventListener("resize", handleResize)
 
-    const pushBack = setInterval(() => {
-      if (benPushRef.current >= stepPushBackRef.current) {
-        setBenPush(benPushRef.current - stepPushBackRef.current)
-      }
-      if (
-        benPushRef.current + benWidthRef.current * 0.75 >=
-        window.outerWidth / 2
-      ) {
-        clearInterval(pushBack)
-      }
-    }, 100)
-    return () => clearInterval(pushBack)
+    function initInterval() {
+      const pushBack = setInterval(() => {
+        if (benPushRef.current >= stepPushBackRef.current) {
+          setBenPush(benPushRef.current - stepPushBackRef.current)
+        }
+        if (
+          benPushRef.current + benWidthRef.current * 0.75 >=
+          window.outerWidth / 2
+        ) {
+          clearInterval(pushBack)
+        }
+        if (pushBackSpeedRef.current !== pushBackSpeedLatestRef.current) {
+          setPushBackSpeedLatest(pushBackSpeedRef.current)
+          clearInterval(pushBack)
+          console.log("changed")
+          initInterval()
+        }
+      }, pushBackSpeedRef.current)
+      return () => clearInterval(pushBack)
+    }
+    initInterval()
   }, [])
   function benPushFormatted() {
     return benPush + "px"
@@ -81,13 +105,34 @@ function Running(props) {
     return benPush + benWidth * 0.75 >= window.outerWidth / 2
   }
   function calcProgress() {
-    const index = Math.round(
-      (benPush / (window.outerWidth / 3)) * benDialogs.length,
-    )
-    if (index >= benDialogs.length) {
-      return null
+    const progress = benPush / (window.outerWidth * 0.5 * 0.75) //6675% or the middle
+    //[0 - 20] -> 0
+    //[21 - 25] -> -1
+    //[26 - 40] -> 1
+    //[41 - 45] -> -1
+    //[46 - 60] -> 2
+    //[61 - 65] -> -1
+    //[66 - 80] -> 3
+    //[81- 85] -> -1
+    //[86 - +++] -> null
+    if (progress < 0.2) {
+      return 0
+    } else if (progress < 0.25) {
+      return -1
+    } else if (progress < 0.4) {
+      return 1
+    } else if (progress < 0.45) {
+      return -1
+    } else if (progress < 0.6) {
+      return 2
+    } else if (progress < 0.65) {
+      return -1
+    } else if (progress < 0.8) {
+      return 3
+    } else if (progress < 0.85) {
+      return -1
     }
-    return index
+    return null
   }
   function calcBenTop() {
     const backgroundHeight = (window.outerWidth / 2) * ratio
@@ -123,9 +168,20 @@ function Running(props) {
   function nicWidthFormatted() {
     return nicWidth + "px"
   }
+  function showDialog() {
+    const progress = calcProgress()
+    return progress !== -1 && benPush >= 10
+  }
+  function handlePushBackSpeedChange(value) {
+    console.log("changing to", value)
+    setPushBackSpeed(value)
+    pushBackSpeedRef.current = pushBackSpeed
+  }
   return (
     <div
-      className={`half-background left item-fade ${fadding ? "fadding" : ""}`}
+      className={`no-select half-background left item-fade ${
+        fadding ? "fadding" : ""
+      }`}
       // style={{ backgroundImage: `url(${snow1}), url(${moon1})` }}
       style={{ backgroundImage: `url(${snowBen})` }}
     >
@@ -165,16 +221,43 @@ function Running(props) {
           />
         </span>
       </div>
-      <span className="dialog absolute left-center">
-        {calcProgress() !== null ? benDialogs[calcProgress()] : hearts()}
-      </span>
-      <span className="dialog absolute right-center">
-        {calcProgress() !== null ? nicDialogs[calcProgress()] : hearts()}
-      </span>
+      {showDialog() ? (
+        <div>
+          <span className="dialog absolute left-center left-bubble">
+            {calcProgress() !== null ? benDialogs[calcProgress()] : hearts()}
+          </span>
+          <span className="dialog absolute right-center right-bubble">
+            {calcProgress() !== null ? nicDialogs[calcProgress()] : hearts()}
+          </span>
+        </div>
+      ) : null}
       <div className="absolute middle">
         <Button size="lg" variant="danger" onClick={handlePlus}>
-          <span>&#9825;</span>
+          <span>CLICK ME! &#9825;</span>
         </Button>
+        <div>{pushBackSpeed}</div>
+        <label htmlFor="difficulty" className="padding-label">
+          Difficulty:
+        </label>
+        <ToggleButtonGroup
+          aria-label="Difficulty"
+          defaultValue={100}
+          type="radio"
+          name="difficulty"
+          id="difficulty"
+          onChange={(e) => handlePushBackSpeedChange(e)}
+        >
+          {radios.map((radio, idx) => (
+            <ToggleButton
+              id={`difficulty ${radio.delay}`}
+              key={idx}
+              variant="outline-primary"
+              value={radio.delay}
+            >
+              {radio.title}
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
       </div>
     </div>
   )
