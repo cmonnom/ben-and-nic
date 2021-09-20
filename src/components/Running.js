@@ -6,6 +6,8 @@ import { useState, useEffect, useRef } from "react"
 import Button from "react-bootstrap/Button"
 import ToggleButton from "react-bootstrap/ToggleButton"
 import ToggleButtonGroup from "react-bootstrap/ToggleButtonGroup"
+import OverlayTrigger from "react-bootstrap/OverlayTrigger"
+import Tooltip from "react-bootstrap/Tooltip"
 
 function Running(props) {
   const radios = [
@@ -232,9 +234,14 @@ function Running(props) {
         </div>
       ) : null}
       <div className="absolute middle">
-        <Button size="lg" variant="danger" onClick={handlePlus}>
-          <span>CLICK ME! &#9825;</span>
-        </Button>
+        <OverlayTrigger
+          placement="right"
+          overlay={<Tooltip>Click Faster to Run Faster!</Tooltip>}
+        >
+          <Button size="lg" variant="danger" onClick={handlePlus}>
+            <span>CLICK ME! &#9825;</span>
+          </Button>
+        </OverlayTrigger>
         <div>
           <br />
         </div>
